@@ -10,11 +10,10 @@ import java.util.concurrent.*;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
-public class Main {
+public class Main2 {
     private static final int N = 10000;
     public static final double epsilon = 0.1;
     private static final double t = 0.00001;
-    public static final int NumberOfThreads = 2;
     public static void main(String[] args) throws InterruptedException {
         for(int i=0;i<10;i++) {
             List<Double> A = new ArrayList<>();
@@ -23,17 +22,25 @@ public class Main {
             InitA(A);
             InitB(b);
             InitX(x);
-            boolean flag;
+            List<Boolean> flag = new ArrayList<>();
+            flag.add(true);
             long startTime = System.nanoTime();
+
             do {
-
+                ExecutorService service = Executors.newSingleThreadExecutor();
                 //flag = checkAnswer(A, b, x);
-                flag = checkAnswerParallel(A, b, x);
+                List<Double> finalX = x;
+                service.execute(() -> {
+                    if(!checkAnswer(A, b, finalX)){ //checkAnswerParallel(A, b, finalX)
+                        flag.set(0,false);
+                    }
+                });
                 //x = nextStep(A, b, x);
-                x = nextStepParallel(A, b, x);
-
+                x = nextStep(A, b, x);
+                service.shutdown();
+                service.awaitTermination(1, TimeUnit.MINUTES);
                 //System.out.println(x);
-            } while (flag);
+            } while (flag.get(0));
             long elapsedNanos = System.nanoTime() - startTime;
             System.out.println(elapsedNanos / 1000000000.0);
         }
@@ -129,59 +136,4 @@ public class Main {
         }
     }
 
-
-    private static List<Double> nextStepParallel(List<Double> A, List<Double> b, List<Double> x) throws InterruptedException {
-        //Ax
-        //-b
-        //*t
-        //x-
-        List<Double> new_X;
-        new_X = mulMatrixOnVectorParallel(A,x);
-        new_X =subVectorOnVector(new_X,b);
-        new_X= mulVectorOnConst(new_X,t);
-        new_X=subVectorOnVector(x,new_X);
-        return new_X;
-    }
-
-    private static List<Double> mulMatrixOnVectorParallel(List<Double> A, List<Double> x) throws InterruptedException {
-        List<Double> new_X = new ArrayList<>(N);
-        for(int i=0;i<N;i++){
-            new_X.add((double) 0);
-        }
-
-        ExecutorService service = Executors.newFixedThreadPool(NumberOfThreads); // Thread
-
-        for(int thread=0;thread<NumberOfThreads;thread+=1){
-            int row=thread*N/NumberOfThreads;
-            service.execute(() -> {
-                int currentRow=row;
-                for(int i=0;i<N/NumberOfThreads;currentRow++,i++) {
-                    double sumOfElements = 0;
-                    for (int column = 0; column < N; column++) {
-                        sumOfElements += A.get(currentRow * N + column);
-                    }
-                    sumOfElements *= x.get(currentRow);
-                    new_X.set(currentRow, sumOfElements);
-                }
-            });
-        }
-        service.shutdown();
-        service.awaitTermination(1, TimeUnit.MINUTES);
-        return new_X;
-    }
-
-    private static boolean checkAnswerParallel(List<Double> A, List<Double> b, List<Double> x) throws InterruptedException {
-        //Ax
-        //-b
-        //takenormX
-        //takenormB
-        // X/B
-        List<Double> new_X;
-        new_X = mulMatrixOnVectorParallel(A, x);
-        new_X = subVectorOnVector(new_X, b);
-        double xDouble = takeNorm(new_X);
-        double bDouble = takeNorm(b);
-        if (xDouble / bDouble < epsilon) return false;
-        else return true;
-    }
 }
