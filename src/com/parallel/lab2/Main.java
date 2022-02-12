@@ -8,25 +8,29 @@ import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
 public class Main {
-    private static final int N = 10;
-    public static final double epsilon = 0.00001;
-    private static final double t = 0.01;
+    private static final int N = 10000;
+    public static final double epsilon = 0.1;
+    private static final double t = 0.00001;
     public static void main(String[] args) {
-        List<Double> A = new ArrayList<>() ;
-        List<Double> b = new ArrayList<>() ;
-        List<Double> x = new ArrayList<>() ;
-        InitA(A);
-        InitB(b);
-        InitX(x);
-        boolean flag=true;
-        do{
-            // here should add Thread
-            flag = checkAnswer(A,b,x);
-            x=nextStep(A,b,x);
-            //
-            System.out.println(x);
-        }while(flag);
-
+        for(int i=0;i<10;i++) {
+            List<Double> A = new ArrayList<>();
+            List<Double> b = new ArrayList<>();
+            List<Double> x = new ArrayList<>();
+            InitA(A);
+            InitB(b);
+            InitX(x);
+            boolean flag;
+            long startTime = System.nanoTime();
+            do {
+                // here should add Thread
+                flag = checkAnswer(A, b, x);
+                x = nextStep(A, b, x);
+                //
+                //System.out.println(x);
+            } while (flag);
+            long elapsedNanos = System.nanoTime() - startTime;
+            System.out.println(elapsedNanos / 1000000000.0);
+        }
     }
 
     private static boolean checkAnswer(List<Double> A, List<Double> b, List<Double> x) {
@@ -119,7 +123,7 @@ public class Main {
     }
     public static void InitX(List<Double> x) {
         for(int i=0;i<N;i++){
-            x.add((double) 0);
+            x.add((double) 10);
         }
     }
 }
