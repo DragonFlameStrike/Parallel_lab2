@@ -1,61 +1,48 @@
 package com.parallel.lab2;
 
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.*;
-
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
-public class Main2 {
-    private static final int N = 10000;
-    public static final double epsilon = 0.1;
+public class NoParallel {
+    public static ArrayList<Double> time;
+    private static final int N = 5000;
+    public static final double epsilon = 0.000001;
     private static final double t = 0.00001;
-    public static void main(String[] args) throws InterruptedException {
-        for(int i=0;i<10;i++) {
+    public static void main(String[] args) {
+        double min_time=1000;
+        for(int i=0;i<4;i++) {
             List<Double> A = new ArrayList<>();
             List<Double> b = new ArrayList<>();
             List<Double> x = new ArrayList<>();
+            List<Double> mulAxSubb;
+            time=new ArrayList<>();
             InitA(A);
             InitB(b);
             InitX(x);
-            List<Boolean> flag = new ArrayList<>();
-            flag.add(true);
+            boolean flag;
             long startTime = System.nanoTime();
-
             do {
-                ExecutorService service = Executors.newSingleThreadExecutor();
-                //flag = checkAnswer(A, b, x);
-                List<Double> finalX = x;
-                service.execute(() -> {
-                    if(!checkAnswer(A, b, finalX)){ //checkAnswerParallel(A, b, finalX)
-                        flag.set(0,false);
-                    }
-                });
-                //x = nextStep(A, b, x);
-                x = nextStep(A, b, x);
-                service.shutdown();
-                service.awaitTermination(1, TimeUnit.MINUTES);
+                mulAxSubb = mulMatrixOnVector(A, x); //N^2
+                mulAxSubb = subVectorOnVector(mulAxSubb,b); //N
+                flag = checkAnswer(mulAxSubb, b); //2N
+                x = nextStep(mulAxSubb, x);//2N
                 //System.out.println(x);
-            } while (flag.get(0));
+            } while (flag);
             long elapsedNanos = System.nanoTime() - startTime;
-            System.out.println(elapsedNanos / 1000000000.0);
+            if(elapsedNanos / 1000000000.0<min_time){
+                min_time=elapsedNanos / 1000000000.0;
+            }
         }
+        System.out.println(min_time);
     }
 
-    private static boolean checkAnswer(List<Double> A, List<Double> b, List<Double> x) {
-        //Ax
-        //-b
+    private static boolean checkAnswer(List<Double> mulAx, List<Double> b) {
         //takenormX
         //takenormB
         // X/B
-        List<Double> new_X;
-        new_X = mulMatrixOnVector(A, x);
-        new_X = subVectorOnVector(new_X, b);
-        double xDouble = takeNorm(new_X);
+        double xDouble = takeNorm(mulAx);
         double bDouble = takeNorm(b);
         if (xDouble / bDouble < epsilon) return false;
         else return true;
@@ -69,16 +56,12 @@ public class Main2 {
         return sqrt(abs(sum));
     }
 
-    private static List<Double> nextStep(List<Double> A, List<Double> b, List<Double> x) {
-        //Ax
-        //-b
+    private static List<Double> nextStep(List<Double> mulAxSubb, List<Double> x) {
         //*t
         //x-
         List<Double> new_X;
-        new_X = mulMatrixOnVector(A,x);
-        new_X =subVectorOnVector(new_X,b);
-        new_X= mulVectorOnConst(new_X,t);
-        new_X=subVectorOnVector(x,new_X);
+        new_X = mulVectorOnConst(mulAxSubb, t);
+        new_X = subVectorOnVector(x, new_X);
         return new_X;
     }
 
@@ -99,18 +82,16 @@ public class Main2 {
     }
 
     private static List<Double> mulMatrixOnVector(List<Double> A, List<Double> x) {
-        List<Double> new_X = new ArrayList<>(N);
+        List<Double> output = new ArrayList<>(N);
         for(int row=0;row<N;row++){
-            // here should add Thread
-            int currentRow=row;
             double sumOfElements=0;
             for(int column=0;column<N;column++){
-                sumOfElements+=A.get(currentRow*N+column);
+                sumOfElements+=A.get(row * N+column);
             }
-            sumOfElements*=x.get(currentRow);
-            new_X.add(currentRow,sumOfElements);
+            sumOfElements*=x.get(row);
+            output.add(row,sumOfElements);
         }
-        return new_X;
+        return output;
     }
 
     public static void InitA(List<Double> A) {
@@ -135,5 +116,6 @@ public class Main2 {
             x.add((double) 10);
         }
     }
-
 }
+
+
