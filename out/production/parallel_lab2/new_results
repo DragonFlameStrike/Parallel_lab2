@@ -1,0 +1,22 @@
+N = 5000;
+epsilon = 0.000001;
+t = 0.00001;
+No Parallel
+result - 24,794154
+
+N = 5000;
+epsilon = 0.000001;
+t = 0.00001;
+Parallel First
+result N=2 - 17,7857286
+result N=4 - 17,7039068
+result N=8 - 17,6267014
+
+N = 5000;
+epsilon = 0.000001;
+t = 0.00001;
+Parallel Second
+result N=2 - 17,6638164
+result N=4 - 17,3555855
+result N=8 -
+
