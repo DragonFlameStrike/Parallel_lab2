@@ -16,7 +16,7 @@ public class ParallelSecond {
     public static final int N = 5000;
     public static final double epsilon = 0.000001;
     public static final double t = 0.00001;
-    public static final int NumberOfThreads = 1;
+    public static final int NumberOfThreads = 2;
     public static List<Double> x = new ArrayList<>();
     public static List<Double> A = new ArrayList<>();
     public static List<Double> mulAxSubb = new ArrayList<>();
@@ -24,8 +24,9 @@ public class ParallelSecond {
     public static List<Double> b = new ArrayList<>();
     public static boolean flagThreadsWorks = true;
     public static boolean AnswerNotFounded = true;
-    public static Object lock = new Object();
     public static ExecutorService MatrixThreads;
+    public static boolean Over=false;
+
 
     public static void main(String[] args) throws InterruptedException {
         double min_time=1000;
@@ -40,14 +41,16 @@ public class ParallelSecond {
             MatrixThreads = Executors.newFixedThreadPool(NumberOfThreads);
             ExecutorService Checker = Executors.newSingleThreadExecutor();
 
-
-            for (int thread = 0; thread < NumberOfThreads; thread++) {
+            for(int j=0;j<NumberOfThreads;j++){
                 isWait.add(false);
+            }
+            for (int thread = 0; thread < NumberOfThreads; thread++) {
                 MatrixThreads.execute(new MatrixThread(thread));
             }
             Checker.execute(new CheckThread());
 
             while(AnswerNotFounded){
+                //System.out.println("Main Thread is waiting...");
                 Thread.sleep(200); //0.2 sec
             }
             System.out.println("End");
@@ -55,6 +58,7 @@ public class ParallelSecond {
             if (elapsedNanos / 1000000000.0 < min_time) {
                 min_time = elapsedNanos / 1000000000.0;
             }
+            Over=true;
             MatrixThreads.shutdown();
             Checker.shutdown();
             MatrixThreads.awaitTermination(5, TimeUnit.SECONDS);
@@ -67,15 +71,18 @@ public class ParallelSecond {
 
 
         CheckThread(){}
-        public synchronized void run() {
+        public void run() {
             do {
                 if (!flagThreadsWorks) {
-                    System.out.println("Try to notify");
-                    notifyAll();
-                    System.out.println("Threads notify");
+                    //System.out.println("Try to notify");
+
+                    for (int i=0;i<NumberOfThreads;i++){
+                        isWait.set(i, false);
+                    }
+                    //System.out.println("Threads notify");
                     flagThreadsWorks = true;
                 }
-                System.out.println("Checker waited");
+                //System.out.println("Checker waited");
                 while (flagThreadsWorks) {
                     for (int thread = 0, count = 0; thread < NumberOfThreads; thread++) {
                         if (isWait.get(thread)) {
@@ -84,14 +91,18 @@ public class ParallelSecond {
                         if (count == NumberOfThreads) {
                             flagThreadsWorks = false;
                         }
+                        if(Over){
+                            break;
+                        }
                     }
                 }
-                System.out.println("Threads done");
-                mulAxSubb = subVectorOnVector(mulAxSubb, b); //N 0.1%
-                x = nextStep(mulAxSubb, x);//2N 0.2%
-                AnswerNotFounded = checkAnswer(mulAxSubb, b); //2N 0.2%
-                System.out.println(AnswerNotFounded);
-            } while (AnswerNotFounded);
+                //System.out.println("Threads done");
+                subVectorOnVector(mulAxSubb, b); //N 0.1%
+                nextStep(mulAxSubb, x);//2N 0.2%
+                checkAnswer(mulAxSubb, b); //2N 0.2%
+                //System.out.println(x);
+                //System.out.println(AnswerNotFounded);
+            } while (AnswerNotFounded && !Over);
         }
     }
     private static class MatrixThread implements Runnable{
@@ -99,30 +110,33 @@ public class ParallelSecond {
         MatrixThread(int currThread){
             this.currThread = currThread;
         }
-        public synchronized void run() {
+        public void run() {
             try{
                 do{
-                    System.out.println("Thread " + (currThread+1) + " start");
-                    isWait.set(currThread, false);
+                    //System.out.println("Thread " + (currThread+1) + " start");
                     mulMatrixOnVectorParallel(A, x, currThread, mulAxSubb); //N^2 99.5%
                     isWait.set(currThread, true);
-                    System.out.println("Thread " + (currThread+1) + " set wait");
-                    wait();
-
-                }while(true);
+                    //System.out.println("Thread " + (currThread+1) + " set wait");
+                    while(isWait.get(currThread)){
+                        Thread.sleep(1);
+                        if(Over){
+                            break;
+                        }
+                    }
+                }while(AnswerNotFounded && !Over);
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
             }
         }
     }
-    private static boolean checkAnswer(List<Double> mulAx, List<Double> b) {
+    private static void checkAnswer(List<Double> mulAx, List<Double> b) {
         //takenormX
         //takenormB
         // X/B
         double xDouble = takeNorm(mulAx);
         double bDouble = takeNorm(b);
-        if (xDouble / bDouble < epsilon) return false;
-        else return true;
+        if (xDouble / bDouble < epsilon) AnswerNotFounded = false;
+        else AnswerNotFounded = true;
     }
     private static double takeNorm(List<Double> vector) {
         double sum=0;
@@ -131,13 +145,12 @@ public class ParallelSecond {
         }
         return sqrt(abs(sum));
     }
-    private static List<Double> nextStep(List<Double> mulAxSubb, List<Double> x) {
+    private static void nextStep(List<Double> mulAxSubb, List<Double> x) {
         //*t
         //x-
-        List<Double> new_X;
-        new_X = mulVectorOnConst(mulAxSubb, t);
-        new_X = subVectorOnVector(x, new_X);
-        return new_X;
+        List<Double> tempPer;
+        tempPer = mulVectorOnConst(mulAxSubb, t);
+        subVectorOnVector(x, tempPer);
     }
     private static List<Double> mulVectorOnConst(List<Double> x, double t) {
         List<Double> new_X = new ArrayList<>(N);
@@ -146,12 +159,10 @@ public class ParallelSecond {
         }
         return new_X;
     }
-    private static List<Double> subVectorOnVector(List<Double> x, List<Double> b) {
-        List<Double> new_X = new ArrayList<>(N);
+    private static void subVectorOnVector(List<Double> x, List<Double> b) {
         for(int row=0;row<N;row++){
-            new_X.add(row,x.get(row)-b.get(row));
+            x.set(row,x.get(row)-b.get(row));
         }
-        return new_X;
     }
     private static void mulMatrixOnVectorParallel(List<Double> A, List<Double> x,int currenThread,List<Double> output) {
 
