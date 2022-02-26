@@ -16,7 +16,7 @@ public class ParallelSecond {
     public static final int N = 5000;
     public static final double epsilon = 0.000001;
     public static final double t = 0.00001;
-    public static final int NumberOfThreads = 2;
+    public static final int NumberOfThreads = 8;
     public static List<Double> x = new ArrayList<>();
     public static List<Double> A = new ArrayList<>();
     public static List<Double> mulAxSubb = new ArrayList<>();
@@ -30,7 +30,7 @@ public class ParallelSecond {
 
     public static void main(String[] args) throws InterruptedException {
         double min_time=1000;
-        for(int i=0;i<4;i++) {
+        for(int i=0;i<1;i++) {
             Over=false;
             AnswerNotFounded = true;
             flagThreadsWorks = true;
