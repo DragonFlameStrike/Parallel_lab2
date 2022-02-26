@@ -22,15 +22,18 @@ public class ParallelSecond {
     public static List<Double> mulAxSubb = new ArrayList<>();
     public static List<Boolean> isWait = new ArrayList<>();
     public static List<Double> b = new ArrayList<>();
-    public static boolean flagThreadsWorks = true;
-    public static boolean AnswerNotFounded = true;
+    public static boolean flagThreadsWorks;
+    public static boolean AnswerNotFounded;
     public static ExecutorService MatrixThreads;
-    public static boolean Over=false;
+    public static boolean Over;
 
 
     public static void main(String[] args) throws InterruptedException {
         double min_time=1000;
-        for(int i=0;i<1;i++) {
+        for(int i=0;i<4;i++) {
+            Over=false;
+            AnswerNotFounded = true;
+            flagThreadsWorks = true;
             System.out.println("start loop " + i);
             InitA(A);
             InitB(b);
